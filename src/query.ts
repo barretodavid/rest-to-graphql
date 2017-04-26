@@ -2,9 +2,9 @@ import { User, Post, Album } from './models';
 
 import './connect';
 
-// User.findById(1)
-//   .populate('posts')
-//   .then(console.log);
+User.findById(1)
+  .populate('posts albums')
+  .then(console.log);
 
 // Post.findById(1)
 //   .populate('_creator')

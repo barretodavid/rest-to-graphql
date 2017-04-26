@@ -41,19 +41,41 @@ function getPhotos(): Promise<IPhotoJPH[]> {
   return getEntities('photos');
 }
 
-function createUserDocument(user: IUserJPH, userTodos: ITodoJPH[]): UserModel {
+function createUsersModel(users: IUserJPH[], todos: ITodoJPH[], posts: IPostJPH[], albums: IAlbumJPH[]): UserModel[] {
+  return users.map(user => {
+    const userTodos = todos.filter(todo => todo.userId === user.id);
+    const userPosts = posts.filter(post => post.userId === user.id);
+    const userAlbums = albums.filter(album => album.userId === user.id);
+    return createUserModel(user, userTodos, userPosts, userAlbums);
+  });
+}
+
+function createUserModel(
+  user: IUserJPH, userTodos: ITodoJPH[], userPosts: IPostJPH[], userAlbums: IAlbumJPH[]
+): UserModel {
   const formattedTodos = userTodos.map(todo => {
     const formattedTodo = { ...todo };
     delete formattedTodo['id'];
     delete formattedTodo['userId'];
     return formattedTodo;
   });
-  const formattedUser = { ...user, '_id': user['id'], todos: formattedTodos };
+
+  const postsId = userPosts.map(post => post.id);
+  const albumsId = userAlbums.map(album => album.id);
+
+  const formattedUser = { ...user, '_id': user['id'], todos: formattedTodos, posts: postsId, albums: albumsId };
   delete formattedUser['id'];
   return <UserModel>(new User(formattedUser));
 }
 
-function createPostDocument(post: IPostJPH, postComments: ICommentJPH[]): PostModel {
+function createPostsModel(posts: IPostJPH[], comments: ICommentJPH[]): PostModel[] {
+  return posts.map(post => {
+    const postComments = comments.filter(comment => comment.postId === post.id);
+    return createPostModel(post, postComments);
+  });
+}
+
+function createPostModel(post: IPostJPH, postComments: ICommentJPH[]): PostModel {
   const formattedComments = postComments.map(comment => {
     const formattedComment = { ...comment };
     delete formattedComment['id'];
@@ -66,7 +88,14 @@ function createPostDocument(post: IPostJPH, postComments: ICommentJPH[]): PostMo
   return <PostModel>(new Post(formattedPost));
 }
 
-function createAlbumDocument(album: IAlbumJPH, albumPhotos: IPhotoJPH[]): AlbumModel {
+function createAlbumsModel(albums: IAlbumJPH[], photos: IPhotoJPH[]): AlbumModel[] {
+  return albums.map(album => {
+    const albumPhotos = photos.filter(photo => photo.albumId === album.id);
+    return createAlbumModel(album, albumPhotos);
+  });
+}
+
+function createAlbumModel(album: IAlbumJPH, albumPhotos: IPhotoJPH[]): AlbumModel {
   const formattedPhotos = albumPhotos.map(photo => {
     const formattedPhoto = { ...photo };
     delete formattedPhoto['id'];
@@ -79,59 +108,24 @@ function createAlbumDocument(album: IAlbumJPH, albumPhotos: IPhotoJPH[]): AlbumM
   return <AlbumModel>(new Album(formattedAlbum));
 }
 
-function getUsersModel(): Promise<UserModel[]> {
-  return Promise.all([getUsers(), getTodos()])
-    .then(([ users, todos ]) => {
-      const usersModel = users.map(user => {
-        const userTodos = todos.filter(todo => todo.userId === user.id);
-        return createUserDocument(user, userTodos);
-      });
-      return usersModel;
-    });
-}
 
-function getPostsModel(): Promise<PostModel[]> {
-  return Promise.all([getPosts(), getComments()])
-    .then(([ posts, comments ]) => {
-      const postsModel = posts.map(post => {
-        const postComments = comments.filter(comment => comment.postId === post.id);
-        return createPostDocument(post, postComments);
-      });
-      return postsModel;
-    });
-}
+Promise.all([getUsers(), getTodos(), getPosts(), getComments(), getAlbums(), getPhotos()])
+  .then(([ users, todos, posts, comments, albums, photos ]) => {
+    const usersModel = createUsersModel(users, todos, posts, albums);
+    const postsModel = createPostsModel(posts, comments);
+    const albumsModel = createAlbumsModel(albums, photos);
 
-function getAlbumsModel(): Promise<AlbumModel[]> {
-  return Promise.all([getAlbums(), getPhotos()])
-    .then(([ albums, photos ]) => {
-      const albumsModel = albums.map(album => {
-        const albumPhotos = photos.filter(photo => photo.albumId === album.id);
-        return createAlbumDocument(album, albumPhotos);
-      });
-      return albumsModel;
-    });
-}
-
-function fetchAndSaveUsers(): Promise<UserModel[]> {
-  return getUsersModel()
-    .then(users => User.create(users));
-}
-
-function fetchAndSavePosts(): Promise<PostModel[]> {
-  return getPostsModel()
-    .then(posts => Post.create(posts));
-}
-
-function fetchAndSaveAlbums(): Promise<AlbumModel[]> {
-  return getAlbumsModel()
-    .then(albums => Album.create(albums));
-}
-
-Promise.all([ User.remove({}), Post.remove({}), Album.remove({})])
-  .then(() => {
-    return Promise.all([fetchAndSaveUsers(), fetchAndSavePosts(), fetchAndSaveAlbums()]);
+    return Promise.all([
+      User.create(usersModel),
+      Post.create(postsModel),
+      Album.create(albumsModel)      
+    ]);
   })
   .then(() => {
     console.log('Fetching and saving completed');
     process.exit(0);
+  })
+  .catch(error => {
+    console.log(`Opps something went wrong: ${error}`);
+    process.exit(1);
   });
