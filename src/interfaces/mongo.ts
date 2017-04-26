@@ -20,4 +20,4 @@ export interface IAlbumMongo extends IAlbumBase {
 
 export type UserModel = IUserMongo & Document;
 export type PostModel = IPostMongo & Document;
-export type AlbumModel = IAlbumBase & Document;
+export type AlbumModel = IAlbumMongo & Document;

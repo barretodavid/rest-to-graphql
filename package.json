@@ -1,21 +1,28 @@
 {
   "name": "node-typescript",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/server.js",
   "author": "David Barreto <barretollano@gmail.com>",
   "license": "MIT",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "loader": "node dist/loader.js",
-    "query": "node dist/query.js"
+    "query": "node dist/query.js",
+    "start": "nodemon --watch dist"
   },
   "dependencies": {
     "@types/mongoose": "^4.7.11",
     "@types/node": "^7.0.13",
     "@types/node-fetch": "^1.6.7",
+    "graphql": "^0.9.3",
+    "koa": "^2.2.0",
+    "koa-convert": "^1.2.0",
+    "koa-graphql": "^0.7.0",
+    "koa-mount": "^3.0.0",
     "mongoose": "^4.9.6",
     "node-fetch": "^1.6.3",
+    "nodemon": "^1.11.0",
     "typescript": "^2.2.2"
   }
 }
