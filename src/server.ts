@@ -78,7 +78,8 @@ const mySchema = buildSchema(`
   } 
 
   type Query {
-    users(_id: Int): [User]
+    user(_id: Int, username: String, email: String): User
+    users(name: String): [User]
     todos(_id: Int): [Todo]
     posts: [Post]
     comments: [Comment]
@@ -88,7 +89,11 @@ const mySchema = buildSchema(`
 `);
 
 const root = {
-  users: (args) => User.find(args).populate('posts albums'),
+  user: (args) => User.findOne(args).populate('posts albums'),
+  users: ({name}) => {
+    const regex = new RegExp(name, 'i');
+    return User.find({ name: regex }).populate('posts albums');
+  },
   todos: (args) => {
     return User.find({}, {_id: 0, todos: 1})
       .then((users: UserModel[]) => {
